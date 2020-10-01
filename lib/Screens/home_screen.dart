@@ -6,6 +6,10 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:intl/intl.dart';
 import 'package:weather_app/Api/apicall.dart';
 import 'package:weather_app/Api/get_position.dart';
+import 'package:weather_app/Helpers/weather.dart';
+import 'package:weather_app/Widgets/background_image.dart';
+import 'package:weather_app/Widgets/forecast_list.dart';
+import 'package:weather_app/Widgets/value_tile.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -19,10 +23,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   TextEditingController textEditingController;
   bool _search = false, _isLoad = false, _isInit = true;
-  int _temp = 0, _maxTemp, _minTemp;
-  String _cityName = 'Your City';
-  int _humidity = 0;
+  double _temp, _maxTemp, _minTemp;
+  String _cityName = 'Your City', _weather = '', _iconId = '';
+  int _humidity = 0, _sunset, _sunrise;
   double _wind = 0.0;
+  IconData _iconData;
+  List<Weather> _forcast;
 
   @override
   void initState() {
@@ -48,12 +54,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       });
 
       final response = await GetPosition.shared.getPosition();
+      _forcast = await ApiCall.shared.getForecast("Surat");
+      // for (final x in forcast) {
+      //   print(x.temperature.celsius);
+      // }
+      // print(forcast[0].temperature.celsius);
       setState(() {
         _isLoad = false;
-        _cityName = response.areaName;
-        _temp = response.temperature.celsius.round();
-        _maxTemp = response.tempMax.celsius.round();
-        _minTemp = response.tempMin.celsius.round();
+        _cityName = response.cityName;
+        _temp = response.temperature.celsius;
+        _maxTemp = response.maxTemperature.celsius;
+        _minTemp = response.minTemperature.celsius;
+        _weather = response.main;
+        _humidity = response.humidity;
+        _wind = response.windSpeed;
+        _iconId = response.iconCode;
+        _iconData = response.getIconData();
+        _sunset = response.sunset;
+        _sunrise = response.sunrise;
       });
     }
     _isInit = false;
@@ -76,16 +94,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       color: Colors.white,
       size: 50,
     );
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: ExactAssetImage('assets/images/snowBackground.jpg'),
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-        ),
-      ),
+    return BackgroundImage(
+      iconId: _iconId,
       child: Scaffold(
         resizeToAvoidBottomPadding: false,
         key: _scaffoldKey,
@@ -141,25 +151,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                             _animationController.reverse();
                                           });
                                           try {
-                                            final response =
+                                            final weatherGenerater =
                                                 await ApiCall.shared.call(
                                                     textEditingController.text);
+                                            final forcast = await ApiCall.shared
+                                                .getForecast(
+                                                    textEditingController.text);
+                                            // print(weatherGenerater.forecast[0]);
                                             setState(() {
                                               _cityName =
                                                   textEditingController.text;
                                               textEditingController.clear();
-                                              _isLoad = false;
-                                              double temp =
-                                                  response['temp'] - 273.15;
-                                              double maxTemp =
-                                                  response['temp_max'] - 273.15;
-                                              double minTemp =
-                                                  response['temp_min'] - 273.15;
 
-                                              _temp = temp.round();
-                                              _maxTemp = maxTemp.round();
-                                              _minTemp = minTemp.round();
-                                              _humidity = response['humidity'];
+                                              _temp = weatherGenerater
+                                                  .temperature.celsius;
+                                              _maxTemp = weatherGenerater
+                                                  .maxTemperature.celsius;
+                                              _minTemp = weatherGenerater
+                                                  .minTemperature.celsius;
+                                              _humidity =
+                                                  weatherGenerater.humidity;
+                                              _wind =
+                                                  weatherGenerater.windSpeed;
+                                              _weather = weatherGenerater.main;
+                                              _iconId =
+                                                  weatherGenerater.iconCode;
+                                              _iconData = weatherGenerater
+                                                  .getIconData();
+                                              _forcast = forcast;
+                                              _sunrise =
+                                                  weatherGenerater.sunrise;
+                                              _sunset = weatherGenerater.sunset;
+                                              _isLoad = false;
                                             });
                                           } catch (e) {
                                             print(e);
@@ -217,13 +240,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ],
                     ),
                     SizedBox(
-                      height: 150.h,
+                      height: 100.h,
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${_temp.round()}°",
+                          "${(_temp).toStringAsFixed(0)}°",
                           style: TextStyle(
                             fontFamily: 'Quicksand',
                             color: Colors.white,
@@ -233,17 +256,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
                               height: 35.h,
                               width: 35.w,
-                              child: Image.asset('assets/icons/snow.png'),
+                              child: Icon(
+                                _iconData,
+                                color: Colors.white,
+                              ),
                             ),
                             SizedBox(
-                              width: 20.w,
+                              width: 50.w,
                             ),
                             Text(
-                              "Snowing",
+                              _weather,
                               style: TextStyle(
                                 fontFamily: 'Quicksand',
                                 color: Colors.white,
@@ -255,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ],
                         ),
                         SizedBox(
-                          height: 10,
+                          height: 20,
                         ),
                         Row(
                           children: [
@@ -265,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               size: 25,
                             ),
                             Text(
-                              _maxTemp.toString(),
+                              _maxTemp.toStringAsFixed(2),
                               style:
                                   TextStyle(color: Colors.white, fontSize: 22),
                             ),
@@ -278,14 +305,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               size: 25,
                             ),
                             Text(
-                              _minTemp.toString(),
+                              _minTemp.toStringAsFixed(2),
                               style:
                                   TextStyle(color: Colors.white, fontSize: 22),
                             ),
                           ],
-                        )
+                        ),
+                        SizedBox(
+                          height: 20,
+                        ),
+                        Divider(
+                          color: Colors.white54,
+                          indent: 10,
+                        ),
                       ],
                     ),
+                    ForecastHorizontal(weathers: _forcast),
                     Column(
                       children: [
                         Divider(
@@ -300,21 +335,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              BottomDetails(
-                                title: 'Wind',
-                                para: "km/h",
-                                value: 13,
-                              ),
-                              BottomDetails(
-                                title: 'Rain',
-                                para: "%",
-                                value: 0,
-                              ),
-                              BottomDetails(
-                                title: 'Humidity',
-                                para: "%",
-                                value: _humidity,
-                              )
+                              ValueTile("Wind speed", '$_wind m/s'),
+                              ValueTile(
+                                  "Sunset",
+                                  DateFormat('h:m a').format(
+                                      DateTime.fromMillisecondsSinceEpoch(
+                                          _sunrise * 1000))),
+                              ValueTile(
+                                  "Sunrise",
+                                  DateFormat('h:m a').format(
+                                      DateTime.fromMillisecondsSinceEpoch(
+                                          _sunset * 1000))),
+                              ValueTile(
+                                  "Humidity", '${_humidity.toString()} %'),
                             ],
                           ),
                         ),
@@ -331,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return _scaffoldKey.currentState.showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.red[100],
+        backgroundColor: Colors.red[50],
         content: Text(
           msg,
           style: TextStyle(color: Colors.red),
