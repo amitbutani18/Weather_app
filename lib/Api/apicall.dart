@@ -35,7 +35,7 @@ class ApiCall {
 
   Future<List<Weather>> getForecast(String cityName) async {
     final url =
-        '$baseUrl/data/2.5/forecast?q=Surat&appid=2f8796eefe67558dc205b09dd336d022';
+        '$baseUrl/data/2.5/forecast?q=$cityName&appid=2f8796eefe67558dc205b09dd336d022';
     print('fetching $url');
     final res = await http.get(url);
     if (res.statusCode != 200) {
