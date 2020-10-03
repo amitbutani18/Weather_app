@@ -2,6 +2,7 @@ import 'package:device_simulator/device_simulator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:weather_app/Screens/home_screen.dart';
+import 'package:weather_app/Screens/swiper_main_screen.dart';
 
 void main() {
   runApp(MyApp());
@@ -21,10 +22,10 @@ class MyApp extends StatelessWidget {
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
         home:
-            // DeviceSimulator(
-            //     brightness: Brightness.dark, enable: true, child:
-            HomeScreen()
-        // ),
+            DeviceSimulator(
+                brightness: Brightness.dark, enable: true, child:
+            SwiperMainScreen()
+        ),
         );
   }
 }

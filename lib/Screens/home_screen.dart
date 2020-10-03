@@ -9,6 +9,7 @@ import 'package:weather_app/Api/get_position.dart';
 import 'package:weather_app/Helpers/weather.dart';
 import 'package:weather_app/Widgets/background_image.dart';
 import 'package:weather_app/Widgets/forecast_list.dart';
+import 'package:weather_app/Widgets/page_swiper.dart';
 import 'package:weather_app/Widgets/value_tile.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,8 +18,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  Animation<double> _fadeAnimation, _btnFadeAnimation;
-  AnimationController _animationController, _btnAnimationController;
+  Animation<double> _fadeAnimation, _btnFadeAnimation, _fullPageAnimation;
+  AnimationController _animationController,
+      _btnAnimationController,
+      _fullPageAnimationController;
   Animation<Offset> _offsetAnimation;
   GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   TextEditingController textEditingController;
@@ -33,6 +36,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _fullPageAnimationController =
+        AnimationController(vsync: this, duration: Duration(seconds: 2));
     _animationController =
         AnimationController(vsync: this, duration: Duration(milliseconds: 800));
     _btnAnimationController =
@@ -43,6 +48,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Tween<double>(begin: 1.0, end: 0.0).animate(_btnAnimationController);
     _offsetAnimation = Tween<Offset>(begin: Offset(0.0, 0.35), end: Offset.zero)
         .animate(_animationController);
+    _fullPageAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(_fullPageAnimationController);
     textEditingController = TextEditingController();
   }
 
@@ -72,6 +79,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _iconData = response.getIconData();
         _sunset = response.sunset;
         _sunrise = response.sunrise;
+        _fullPageAnimationController.forward();
       });
     }
     _isInit = false;
@@ -102,258 +110,200 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         backgroundColor: Colors.black54,
         body: _isLoad
             ? spinkit
-            : Padding(
-                padding: const EdgeInsets.all(18.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _search = true;
-                              _animationController.forward();
-                              _btnAnimationController.forward();
-                            });
-                          },
-                          child: _search
+            : FadeTransition(
+                opacity: _fullPageAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.all(18.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _search = true;
+                                _animationController.forward();
+                                _btnAnimationController.forward();
+                              });
+                            },
+                            child: _search
+                                ? Container()
+                                : FadeTransition(
+                                    opacity: _btnFadeAnimation,
+                                    child: Container(
+                                      height: 45.h,
+                                      width: 45.w,
+                                      child: Image.asset(
+                                          'assets/icons/search_icon.png'),
+                                    ),
+                                  ),
+                          ),
+                          _search
+                              ? FadeTransition(
+                                  opacity: _fadeAnimation,
+                                  child: SlideTransition(
+                                    position: _offsetAnimation,
+                                    child: Row(
+                                      children: [
+                                        customCitySearch(),
+                                        SizedBox(
+                                          width: 20,
+                                        ),
+                                        GestureDetector(
+                                          onTap: () async {
+                                            setState(() {
+                                              _isLoad = true;
+                                              _search = false;
+                                              _btnAnimationController.reverse();
+                                              _animationController.reverse();
+                                            });
+                                            try {
+                                              final weatherGenerater =
+                                                  await ApiCall.shared.call(
+                                                      textEditingController
+                                                          .text);
+                                              final forcast = await ApiCall
+                                                  .shared
+                                                  .getForecast(
+                                                      textEditingController
+                                                          .text);
+                                              // print(weatherGenerater.forecast[0]);
+                                              setState(() {
+                                                _cityName =
+                                                    textEditingController.text;
+                                                textEditingController.clear();
+
+                                                _temp = weatherGenerater
+                                                    .temperature.celsius;
+                                                _maxTemp = weatherGenerater
+                                                    .maxTemperature.celsius;
+                                                _minTemp = weatherGenerater
+                                                    .minTemperature.celsius;
+                                                _humidity =
+                                                    weatherGenerater.humidity;
+                                                _wind =
+                                                    weatherGenerater.windSpeed;
+                                                _weather =
+                                                    weatherGenerater.main;
+                                                _iconId =
+                                                    weatherGenerater.iconCode;
+                                                _iconData = weatherGenerater
+                                                    .getIconData();
+                                                _forcast = forcast;
+                                                _sunrise =
+                                                    weatherGenerater.sunrise;
+                                                _sunset =
+                                                    weatherGenerater.sunset;
+                                                _isLoad = false;
+                                                _fullPageAnimationController
+                                                    .reset();
+                                                _fullPageAnimationController
+                                                    .forward();
+                                              });
+                                            } catch (e) {
+                                              print(e);
+                                              setState(() {
+                                                _isLoad = false;
+                                              });
+                                              customSnackbar(e.toString());
+                                            }
+                                          },
+                                          child: Container(
+                                            child: Icon(
+                                              Icons.check,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : Container(),
+                          _search
                               ? Container()
                               : FadeTransition(
                                   opacity: _btnFadeAnimation,
                                   child: Container(
                                     height: 45.h,
                                     width: 45.w,
-                                    child: Image.asset(
-                                        'assets/icons/search_icon.png'),
+                                    child: Image.asset('assets/icons/menu.png'),
                                   ),
                                 ),
-                        ),
-                        _search
-                            ? FadeTransition(
-                                opacity: _fadeAnimation,
-                                child: SlideTransition(
-                                  position: _offsetAnimation,
-                                  child: Row(
-                                    children: [
-                                      customCitySearch(),
-                                      SizedBox(
-                                        width: 20,
-                                      ),
-                                      GestureDetector(
-                                        onTap: () async {
-                                          setState(() {
-                                            _isLoad = true;
-                                            _search = false;
-                                            _btnAnimationController.reverse();
-                                            _animationController.reverse();
-                                          });
-                                          try {
-                                            final weatherGenerater =
-                                                await ApiCall.shared.call(
-                                                    textEditingController.text);
-                                            final forcast = await ApiCall.shared
-                                                .getForecast(
-                                                    textEditingController.text);
-                                            // print(weatherGenerater.forecast[0]);
-                                            setState(() {
-                                              _cityName =
-                                                  textEditingController.text;
-                                              textEditingController.clear();
-
-                                              _temp = weatherGenerater
-                                                  .temperature.celsius;
-                                              _maxTemp = weatherGenerater
-                                                  .maxTemperature.celsius;
-                                              _minTemp = weatherGenerater
-                                                  .minTemperature.celsius;
-                                              _humidity =
-                                                  weatherGenerater.humidity;
-                                              _wind =
-                                                  weatherGenerater.windSpeed;
-                                              _weather = weatherGenerater.main;
-                                              _iconId =
-                                                  weatherGenerater.iconCode;
-                                              _iconData = weatherGenerater
-                                                  .getIconData();
-                                              _forcast = forcast;
-                                              _sunrise =
-                                                  weatherGenerater.sunrise;
-                                              _sunset = weatherGenerater.sunset;
-                                              _isLoad = false;
-                                            });
-                                          } catch (e) {
-                                            print(e);
-                                            setState(() {
-                                              _isLoad = false;
-                                            });
-                                            customSnackbar(e.toString());
-                                          }
-                                        },
-                                        child: Container(
-                                          child: Icon(
-                                            Icons.check,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              )
-                            : Container(),
-                        _search
-                            ? Container()
-                            : FadeTransition(
-                                opacity: _btnFadeAnimation,
-                                child: Container(
-                                  height: 45.h,
-                                  width: 45.w,
-                                  child: Image.asset('assets/icons/menu.png'),
-                                ),
-                              ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _cityName,
-                          style: TextStyle(
-                            fontFamily: 'Quicksand',
-                            color: Colors.white,
-                            fontSize: 75.ssp,
-                            fontWeight: FontWeight.w700,
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _cityName,
+                            style: TextStyle(
+                              fontFamily: 'Quicksand',
+                              color: Colors.white,
+                              fontSize: 75.ssp,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        Text(
-                          "${DateFormat("dd-MMM-yyyy hh:mm:ss").format(DateTime.now())} ",
-                          style: TextStyle(
-                            fontFamily: 'Quicksand',
-                            color: Colors.white,
-                            fontSize: 25.ssp,
-                            fontWeight: FontWeight.normal,
+                          Text(
+                            "${DateFormat("dd-MMM-yyyy hh:mm:ss").format(DateTime.now())} ",
+                            style: TextStyle(
+                              fontFamily: 'Quicksand',
+                              color: Colors.white,
+                              fontSize: 25.ssp,
+                              fontWeight: FontWeight.normal,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(
-                      height: 100.h,
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "${(_temp).toStringAsFixed(0)}°",
-                          style: TextStyle(
-                            fontFamily: 'Quicksand',
-                            color: Colors.white,
-                            fontSize: 140.ssp,
-                            fontWeight: FontWeight.w300,
-                            letterSpacing: 1.5,
+                        ],
+                      ),
+                      SizedBox(
+                        height: 100.h,
+                      ),
+                      PageSwiper(
+                          temp: _temp,
+                          maxTemp: _maxTemp,
+                          minTemp: _minTemp,
+                          weather: _weather,
+                          iconData: _iconData,
+                          forcast: _forcast),
+                      ForecastHorizontal(weathers: _forcast),
+                      Column(
+                        children: [
+                          Divider(
+                            color: Colors.white54,
+                            indent: 10,
                           ),
-                        ),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              height: 35.h,
-                              width: 35.w,
-                              child: Icon(
-                                _iconData,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(
-                              width: 50.w,
-                            ),
-                            Text(
-                              _weather,
-                              style: TextStyle(
-                                fontFamily: 'Quicksand',
-                                color: Colors.white,
-                                fontSize: 35.ssp,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(
-                          height: 20,
-                        ),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.arrow_upward,
-                              color: Colors.green,
-                              size: 25,
-                            ),
-                            Text(
-                              _maxTemp.toStringAsFixed(2),
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 22),
-                            ),
-                            SizedBox(
-                              width: 20,
-                            ),
-                            Icon(
-                              Icons.arrow_downward,
-                              color: Colors.red,
-                              size: 25,
-                            ),
-                            Text(
-                              _minTemp.toStringAsFixed(2),
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 22),
-                            ),
-                          ],
-                        ),
-                        SizedBox(
-                          height: 20,
-                        ),
-                        Divider(
-                          color: Colors.white54,
-                          indent: 10,
-                        ),
-                      ],
-                    ),
-                    ForecastHorizontal(weathers: _forcast),
-                    Column(
-                      children: [
-                        Divider(
-                          color: Colors.white54,
-                          indent: 10,
-                        ),
-                        SizedBox(
-                          height: 50.h,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 18.0, right: 18),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              ValueTile("Wind speed", '$_wind m/s'),
-                              ValueTile(
-                                  "Sunset",
-                                  DateFormat('h:m a').format(
-                                      DateTime.fromMillisecondsSinceEpoch(
-                                          _sunrise * 1000))),
-                              ValueTile(
-                                  "Sunrise",
-                                  DateFormat('h:m a').format(
-                                      DateTime.fromMillisecondsSinceEpoch(
-                                          _sunset * 1000))),
-                              ValueTile(
-                                  "Humidity", '${_humidity.toString()} %'),
-                            ],
+                          SizedBox(
+                            height: 50.h,
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          Padding(
+                            padding:
+                                const EdgeInsets.only(left: 18.0, right: 18),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                ValueTile("Wind speed", '$_wind m/s'),
+                                ValueTile(
+                                    "Sunset",
+                                    DateFormat('h:m a').format(
+                                        DateTime.fromMillisecondsSinceEpoch(
+                                            _sunrise * 1000))),
+                                ValueTile(
+                                    "Sunrise",
+                                    DateFormat('h:m a').format(
+                                        DateTime.fromMillisecondsSinceEpoch(
+                                            _sunset * 1000))),
+                                ValueTile(
+                                    "Humidity", '${_humidity.toString()} %'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
       ),

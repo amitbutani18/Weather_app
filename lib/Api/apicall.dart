@@ -15,8 +15,7 @@ class ApiCall {
       final response1 = await http.get(
           "http://api.openweathermap.org/data/2.5/weather?q=$cityName&appid=d209c7c2dd01744b5c49c851441283ea");
       Map map = json.decode(response1.body);
-      // print(map);
-
+      print(map);
       if (map.containsKey('message')) {
         print("map['message']");
         throw map['message'];
@@ -35,7 +34,7 @@ class ApiCall {
 
   Future<List<Weather>> getForecast(String cityName) async {
     final url =
-        '$baseUrl/data/2.5/forecast?q=Surat&appid=2f8796eefe67558dc205b09dd336d022';
+        '$baseUrl/data/2.5/forecast?q=$cityName&appid=2f8796eefe67558dc205b09dd336d022';
     print('fetching $url');
     final res = await http.get(url);
     if (res.statusCode != 200) {
